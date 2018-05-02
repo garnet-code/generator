@@ -14,46 +14,38 @@ def get_all_permissions():
 	soup=BeautifulSoup(urllib.urlopen(url_user_permissions),"html.parser")
 
 	"""
-		...
-		<table id="constants">
+		<div class="api apilevel-*" data-version-added="*">
+			<h3 class="api-name">PERMISSION NAME</h3>
 			...
-				<tr class="apilevel-*" data-version-added="*">
-					...
-						<td width="100%">
-							<a href="...">
-								<span>PERMISSION_NAME</span>
-							</a>
-						</td>
-				</tr>
-				...
-		</table>
+				<p>Protection level: A|B<p>
+		</div>
 	"""
-	tr_unique_attribute="data-version-added"
-	table=soup.find("table",id="constants")
-	max_sdk_version=""
-
-	for tr in table.find_all("tr"):
-		if tr.has_attr(tr_unique_attribute):
-			links=tr.find_all("a")
-			if len(links)>=2:
-				# First element must be "String"
-				name=links[1].text
-				api_level=tr[tr_unique_attribute]
-				params={
-					"name":name,
-					"maxSdkVersion":max_sdk_version,
-					"apiLevel":api_level
-				}
-				permissions.append(params)
+	divs=soup.find_all("div", class_="api")
+	max_sdk_version=None
+	for div in divs:
+		if div.has_attr("data-version-added"):
+			p=div.find("p",text=re.compile("Protection level:"))
+			protection_levels=[]
+			if p:
+				text=p.text.split(":")[1].strip()
+				protection_levels=text.split("|")
+			name=div.find("h3", class_="api-name").text
+			api_level=div["data-version-added"]
+			params={
+				"name":name,
+				"maxSdkVersion":max_sdk_version,
+				"apiLevel":api_level,
+				"protectionLevel":protection_levels
+			}
+			permissions.append(params)
 		
-	
 	return permissions
 
 def main():
 	for permission in get_all_permissions():
 		name=permission["name"]
 		max_sdk_version=permission["maxSdkVersion"]
-		apiLevel=permission["apiLevel"]
+		api_level=permission["apiLevel"]
 		"""
 			Syntax: <uses-permission android:name="string" android:maxSdkVersion="integer" />
 
